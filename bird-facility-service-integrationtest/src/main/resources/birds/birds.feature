@@ -57,3 +57,66 @@ Feature: List the birds in a facility
     When I request birds with "facilityId=F-100&toAmount=abc"
     Then the response status is 400
     And the error mentions "toAmount must be a number"
+
+  # ----------------------------------------------- POST /birds/search
+  #
+  # Woods' arrival dates are counted back from the day it starts:
+  #   Robin 20 days, Blue tit 3 months, Magpie 8 months, Sparrow 14 months ago.
+  # So the dates below are written relative to today too: {today},
+  # {tomorrow} and {N months ago} are replaced before the request is sent.
+
+  Scenario: Search without dates works like GET
+    When I search birds with:
+      """
+      {"facilityId": "F-100"}
+      """
+    Then the response status is 200
+    And the response contains 4 birds
+
+  Scenario: Birds that arrived in the last 6 months
+    When I search birds with:
+      """
+      {"facilityId": "F-100", "fromDate": "{6 months ago}", "toDate": "{today}"}
+      """
+    Then the response status is 200
+    And the response contains 2 birds
+
+  Scenario: The whole last 12 months leaves out the Sparrow
+    When I search birds with:
+      """
+      {"facilityId": "F-100", "fromDate": "{12 months ago}", "toDate": "{today}"}
+      """
+    Then the response status is 200
+    And the response contains 3 birds
+
+  Scenario: A fromDate older than 12 months is rejected before woods is called
+    When I search birds with:
+      """
+      {"facilityId": "F-100", "fromDate": "2020-01-01", "toDate": "{today}"}
+      """
+    Then the response status is 400
+    And the error mentions "fromDate and toDate must be within the last 12 months"
+
+  Scenario: A toDate in the future is rejected
+    When I search birds with:
+      """
+      {"facilityId": "F-100", "fromDate": "{1 months ago}", "toDate": "{tomorrow}"}
+      """
+    Then the response status is 400
+    And the error mentions "fromDate and toDate must be within the last 12 months"
+
+  Scenario: Reversed dates are rejected
+    When I search birds with:
+      """
+      {"facilityId": "F-100", "fromDate": "{today}", "toDate": "{1 months ago}"}
+      """
+    Then the response status is 400
+    And the error mentions "fromDate must be on or before toDate"
+
+  Scenario: A date that doesn't exist is rejected
+    When I search birds with:
+      """
+      {"facilityId": "F-100", "fromDate": "2026-13-45"}
+      """
+    Then the response status is 400
+    And the error mentions "dates are yyyy-MM-dd"

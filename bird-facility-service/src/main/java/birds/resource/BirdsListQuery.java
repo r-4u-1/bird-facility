@@ -1,5 +1,6 @@
 package birds.resource;
 
+import birds.core.AmountQuery;
 import birds.core.ValidBirdsQuery;
 import birds.model.AmountRange;
 import birds.model.request.BirdsSearchCriteria;
@@ -37,7 +38,7 @@ import java.math.BigDecimal;
  * In your real project this class may be GENERATED from api-contract-birds.yaml.
  */
 @ValidBirdsQuery    // the cross-field rule (from <= to), checked by core/BirdsValidation
-public class BirdsListQuery {
+public class BirdsListQuery implements AmountQuery {
 
     /**
      * Blank (empty or only spaces), OR up to 13 digits with optionally 1-2
@@ -71,10 +72,12 @@ public class BirdsListQuery {
     }
 
     /** Parsed amounts. Shared with BirdsValidation so parsing exists once. */
+    @Override
     public BigDecimal fromAmountAsDecimal() {
         return toDecimal(fromAmount);
     }
 
+    @Override
     public BigDecimal toAmountAsDecimal() {
         return toDecimal(toAmount);
     }

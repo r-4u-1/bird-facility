@@ -15,6 +15,7 @@ import jakarta.xml.bind.annotation.XmlElement;
  *     <FoodType>Insects</FoodType>
  *     <FoodGramsPerDay>12</FoodGramsPerDay>
  *     <Feathers>...</Feathers>
+ *     <ArrivalDate>2026-05-01</ArrivalDate>
  *   </Bird>
  *
  * Everything is text, and the food fields are flat on the bird. Our own Bird
@@ -43,4 +44,7 @@ public class WoodsBird {
 
     @XmlElement(name = "Feathers")
     public WoodsBirdsFeathers feathers;
+
+    @XmlElement(name = "ArrivalDate")
+    public String arrivalDate;
 }

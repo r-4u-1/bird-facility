@@ -1,6 +1,7 @@
 package birds.woods.repository;
 
 import birds.model.AmountRange;
+import birds.model.DateRange;
 import birds.model.request.BirdsSearchCriteria;
 import birds.model.response.list.Bird;
 import birds.repository.BirdsRepositoryException;
@@ -14,7 +15,6 @@ import birds.woods.model.response.WoodsBirdsListResponse;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
-import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Application;
 import jakarta.ws.rs.core.MediaType;
@@ -29,10 +29,12 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.ServerSocket;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -143,6 +145,17 @@ class BirdsRepositoryImplJerseyTest extends JerseyTest {
         // <FromAmount></FromAmount> arrives as "" on the woods side.
         assertEquals("", FakeWoodsResource.lastRequest.fromAmount);
         assertEquals("", FakeWoodsResource.lastRequest.toAmount);
+        assertEquals("", FakeWoodsResource.lastRequest.fromDate);
+        assertEquals("", FakeWoodsResource.lastRequest.toDate);
+    }
+
+    @Test
+    void arrivalRange_isSentToWoodsAsIsoDates() {
+        repository.findBirds(new BirdsSearchCriteria("F-100", Optional.empty(),
+                DateRange.of(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 30))));
+
+        assertEquals("2026-05-01", FakeWoodsResource.lastRequest.fromDate);
+        assertEquals("2026-06-30", FakeWoodsResource.lastRequest.toDate);
     }
 
     // -------------------------------------------- 2. woods' answer -> our models
@@ -159,6 +172,7 @@ class BirdsRepositoryImplJerseyTest extends JerseyTest {
         assertEquals("Brown", robin.feathers().colors().primary());
         assertNull(robin.feathers().colors().secondary(), "woods' empty <SecondaryColor> becomes null");
         assertEquals(12, robin.food().gramsPerDay());
+        assertEquals(LocalDate.of(2026, 5, 1), robin.arrivedOn());
     }
 
     // -------------------------------------------- 3. woods errors
@@ -191,7 +205,8 @@ class BirdsRepositoryImplJerseyTest extends JerseyTest {
 
             assertTrue(thrown.getMessage().startsWith("Could not call woods"), thrown.getMessage());
             // The original low-level error is kept as the cause, for the logs.
-            assertInstanceOf(ProcessingException.class, thrown.getCause());
+            // (Jersey wraps it in a WebApplicationException, other clients in a ProcessingException.)
+            assertNotNull(thrown.getCause());
         } finally {
             pointingNowhere.close();
         }
@@ -222,6 +237,7 @@ class BirdsRepositoryImplJerseyTest extends JerseyTest {
         robin.foodType = "Insects";
         robin.foodGramsPerDay = "12";
         robin.feathers = feathers;
+        robin.arrivalDate = "2026-05-01";
 
         WoodsBirdsBody body = new WoodsBirdsBody();
         body.birds = List.of(robin);

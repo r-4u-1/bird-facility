@@ -43,12 +43,14 @@ public final class WoodsXml {
         public RequestBody body;
     }
 
-    /** The search fields. Woods' rule: an empty string means "no filter". */
+    /** The search fields. Woods' rule: an empty string means "no filter". Dates are "yyyy-MM-dd". */
     @XmlAccessorType(XmlAccessType.FIELD)
     public static class RequestBody {
         @XmlElement(name = "FacilityId") public String facilityId;
         @XmlElement(name = "FromAmount") public String fromAmount;
         @XmlElement(name = "ToAmount")   public String toAmount;
+        @XmlElement(name = "FromDate")   public String fromDate;
+        @XmlElement(name = "ToDate")     public String toDate;
     }
 
     // ----------------------------------------------------------------- response
@@ -75,7 +77,7 @@ public final class WoodsXml {
 
     /** One <Bird>. propOrder fixes the element order in the output. */
     @XmlAccessorType(XmlAccessType.FIELD)
-    @XmlType(propOrder = {"id", "name", "species", "price", "foodType", "foodGramsPerDay", "feathers"})
+    @XmlType(propOrder = {"id", "name", "species", "price", "foodType", "foodGramsPerDay", "feathers", "arrivalDate"})
     public static class BirdElement {
         @XmlElement(name = "Id")              public String id;
         @XmlElement(name = "Name")            public String name;
@@ -84,6 +86,7 @@ public final class WoodsXml {
         @XmlElement(name = "FoodType")        public String foodType;
         @XmlElement(name = "FoodGramsPerDay") public String foodGramsPerDay;
         @XmlElement(name = "Feathers")        public FeathersElement feathers;
+        @XmlElement(name = "ArrivalDate")     public String arrivalDate;
     }
 
     @XmlAccessorType(XmlAccessType.FIELD)

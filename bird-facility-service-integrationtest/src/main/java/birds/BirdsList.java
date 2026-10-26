@@ -9,6 +9,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,6 +50,30 @@ public class BirdsList {
                 .build();
         // send() is blocking; it's the synchronous version of await fetch(...)
         response = http.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    /**
+     * A step followed by a """ block (a "doc string"): Cucumber passes the
+     * block's text as the last argument.
+     */
+    @When("I search birds with:")
+    public void iSearchBirdsWith(String json) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(BASE_URL + "/birds/search"))
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(withDates(json)))
+                .build();
+        response = http.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    /** Replaces {today}, {tomorrow} and {N months ago} with real yyyy-MM-dd dates. */
+    private static String withDates(String text) {
+        LocalDate today = LocalDate.now();
+        Matcher monthsAgo = Pattern.compile("\\{(\\d+) months ago}").matcher(text);
+        String replaced = monthsAgo.replaceAll(m -> today.minusMonths(Long.parseLong(m.group(1))).toString());
+        return replaced
+                .replace("{today}", today.toString())
+                .replace("{tomorrow}", today.plusDays(1).toString());
     }
 
     @Then("the response status is {int}")

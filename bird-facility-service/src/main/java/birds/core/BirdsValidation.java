@@ -1,7 +1,5 @@
 package birds.core;
 
-import birds.resource.BirdsListQuery;
-
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
@@ -19,14 +17,15 @@ import java.math.BigDecimal;
  * the validator "fixes" the data, and later code checks again because it
  * can't be sure the validator ran first.
  *
- * ConstraintValidator<ValidBirdsQuery, BirdsListQuery> reads as: "validates
- * the @ValidBirdsQuery annotation, when it's placed on a BirdsListQuery".
- * The server creates this class itself; you never call it directly.
+ * ConstraintValidator<ValidBirdsQuery, AmountQuery> reads as: "validates
+ * the @ValidBirdsQuery annotation, when it's placed on any AmountQuery"
+ * (the GET query and the POST body). The server creates this class itself;
+ * you never call it directly.
  */
-public class BirdsValidation implements ConstraintValidator<ValidBirdsQuery, BirdsListQuery> {
+public class BirdsValidation implements ConstraintValidator<ValidBirdsQuery, AmountQuery> {
 
     @Override
-    public boolean isValid(BirdsListQuery query, ConstraintValidatorContext context) {
+    public boolean isValid(AmountQuery query, ConstraintValidatorContext context) {
         if (query == null) {
             return true;    // convention: null is @NotNull's job, not every validator's
         }

@@ -1,14 +1,17 @@
 package birds.resource;
 
 import birds.error.RepositoryExceptionMapper;
+import birds.error.UnreadableBodyExceptionMapper;
 import birds.error.ValidationExceptionMapper;
 import birds.model.AmountRange;
+import birds.model.DateRange;
 import birds.model.request.BirdsSearchCriteria;
 import birds.model.response.list.Bird;
 import birds.repository.BirdsRepository;
 import birds.repository.BirdsRepositoryException;
 import birds.service.BirdsService;
 
+import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.core.Application;
 import jakarta.ws.rs.core.Response;
 
@@ -21,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -68,6 +72,7 @@ class BirdsApiJerseyTest extends JerseyTest {
                 .register(BirdsApi.class)
                 .register(ValidationExceptionMapper.class)
                 .register(RepositoryExceptionMapper.class)
+                .register(UnreadableBodyExceptionMapper.class)
                 // On the real server CDI does @Inject. Here Jersey's own injector
                 // (HK2) does it, so we tell it what to hand out for BirdsService.
                 .register(new AbstractBinder() {
@@ -96,7 +101,7 @@ class BirdsApiJerseyTest extends JerseyTest {
     }
 
     private static Bird bird(String name, String price) {
-        return new Bird("B-" + name, name, "test species", new BigDecimal(price), null, null);
+        return new Bird("B-" + name, name, "test species", new BigDecimal(price), null, null, null);
     }
 
     /** What did the service pass to the repository? (Mockito ArgumentCaptor) */
@@ -225,6 +230,110 @@ class BirdsApiJerseyTest extends JerseyTest {
 
         assertEquals(400, response.getStatus());
         assertTrue(response.readEntity(String.class).contains("toAmount must be a number"));
+        verifyNoInteractions(repository);
+    }
+
+    // ------------------------------------------------------- POST /birds/search
+
+    /** POSTs a JSON body, like fetch(url, {method: "POST", body: JSON.stringify(...)}). */
+    private Response search(String json) {
+        return target("birds/search").request().post(Entity.json(json));
+    }
+
+    private static final LocalDate TODAY = LocalDate.now();
+
+    @Test
+    void search_withDatesInsideTheLastYear_sendsTheRangeToTheRepository() {
+        LocalDate from = TODAY.minusMonths(6);
+        Response response = search("""
+                {"facilityId": "F-100", "fromDate": "%s", "toDate": "%s"}
+                """.formatted(from, TODAY));
+
+        assertEquals(200, response.getStatus(), response.readEntity(String.class));
+        BirdsSearchCriteria criteria = criteriaSentToRepository();
+        assertEquals(Optional.of(new DateRange(from, TODAY)), criteria.arrivalRange());
+        assertEquals(Optional.empty(), criteria.priceRange());
+    }
+
+    @Test
+    void search_withAmountsAndNoDates_worksLikeGet() {
+        Response response = search("""
+                {"facilityId": "F-100", "fromAmount": 100, "toAmount": 300}
+                """);
+
+        assertEquals(200, response.getStatus(), response.readEntity(String.class));
+        assertEquals(range("100", "300"), criteriaSentToRepository().priceRange());
+        assertEquals(Optional.empty(), criteriaSentToRepository().arrivalRange());
+    }
+
+    @Test
+    void search_fromDateOlderThanTwelveMonths_gives400_andWoodsIsNeverCalled() {
+        Response response = search("""
+                {"facilityId": "F-100", "fromDate": "%s", "toDate": "%s"}
+                """.formatted(TODAY.minusMonths(12).minusDays(1), TODAY));
+        String json = response.readEntity(String.class);
+
+        assertEquals(400, response.getStatus());
+        assertTrue(json.contains("fromDate and toDate must be within the last 12 months"), json);
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void search_toDateInTheFuture_gives400() {
+        Response response = search("""
+                {"facilityId": "F-100", "fromDate": "%s", "toDate": "%s"}
+                """.formatted(TODAY.minusMonths(1), TODAY.plusDays(1)));
+        String json = response.readEntity(String.class);
+
+        assertEquals(400, response.getStatus());
+        assertTrue(json.contains("fromDate and toDate must be within the last 12 months"), json);
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void search_reversedDates_gives400() {
+        Response response = search("""
+                {"facilityId": "F-100", "fromDate": "%s", "toDate": "%s"}
+                """.formatted(TODAY, TODAY.minusMonths(1)));
+        String json = response.readEntity(String.class);
+
+        assertEquals(400, response.getStatus());
+        assertTrue(json.contains("fromDate must be on or before toDate"), json);
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void search_reversedAmounts_usesTheSameRuleAsGet() {
+        Response response = search("""
+                {"facilityId": "F-100", "fromAmount": 500, "toAmount": 100}
+                """);
+        String json = response.readEntity(String.class);
+
+        assertEquals(400, response.getStatus());
+        assertTrue(json.contains("fromAmount must be less than or equal to toAmount"), json);
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void search_notADate_gives400() {
+        Response response = search("""
+                {"facilityId": "F-100", "fromDate": "2026-13-45"}
+                """);
+
+        String json = response.readEntity(String.class);
+
+        assertEquals(400, response.getStatus(), json);
+        assertTrue(json.contains("dates are yyyy-MM-dd"), json);
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void search_missingFacilityId_gives400() {
+        Response response = search("{}");
+        String json = response.readEntity(String.class);
+
+        assertEquals(400, response.getStatus());
+        assertTrue(json.contains("facilityId is required"), json);
         verifyNoInteractions(repository);
     }
 }

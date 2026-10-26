@@ -1,0 +1,20 @@
+# Maven build output (like dist/ or build/): recreated by every mvn build
+target/
+
+# IntelliJ IDEA project files: personal to each developer's machine
+.idea/
+*.iml
+out/
+
+# Other IDEs
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

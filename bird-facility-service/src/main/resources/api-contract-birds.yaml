@@ -12,7 +12,7 @@ openapi: 3.0.3
 info:
   title: Bird facility service
   version: 1.0.0
-  description: Lists the birds in a facility, with an optional price filter.
+  description: Lists the birds in a facility, with optional price and arrival-date filters.
 
 servers:
   - url: http://localhost:8080/bird-facility-service/api
@@ -69,8 +69,73 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /birds/search:
+    post:
+      operationId: searchBirds
+      summary: Search the birds in a facility by price and arrival date, cheapest first
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BirdsSearchRequest'
+      responses:
+        '200':
+          description: The matching birds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BirdsListResponse'
+        '400':
+          description: >
+            Invalid body: unreadable JSON, a bad value, reversed amounts or
+            dates, or dates outside the last 12 months
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: The woods system could not be reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
+    BirdsSearchRequest:
+      type: object
+      required: [facilityId]
+      properties:
+        facilityId:
+          type: string
+          pattern: '^F-\d{3}$'
+          example: F-100
+        fromAmount:
+          type: number
+          minimum: 0
+          description: Lowest price. If only fromAmount is given, it is used for both ends.
+          example: 100
+        toAmount:
+          type: number
+          minimum: 0
+          description: Highest price. If only toAmount is given, it is used for both ends.
+          example: 300
+        fromDate:
+          type: string
+          format: date
+          description: >
+            Earliest arrival date. Must be within the last 12 months (no earlier
+            than today minus 12 months). If only fromDate is given, it is used
+            for both ends, so the search returns birds that arrived on that day.
+          example: '2026-05-01'
+        toDate:
+          type: string
+          format: date
+          description: >
+            Latest arrival date. Must not be in the future, and not before
+            fromDate. If only toDate is given, it is used for both ends.
+          example: '2026-06-30'
     BirdsListResponse:
       type: object
       properties:
@@ -95,6 +160,12 @@ components:
           $ref: '#/components/schemas/Feathers'
         food:
           $ref: '#/components/schemas/Food'
+        arrivedOn:
+          type: string
+          format: date
+          nullable: true
+          description: The day the bird arrived at the facility
+          example: '2026-05-01'
     Feathers:
       type: object
       properties:

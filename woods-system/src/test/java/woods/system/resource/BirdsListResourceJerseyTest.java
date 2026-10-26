@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -66,15 +67,21 @@ class BirdsListResourceJerseyTest extends JerseyTest {
 
     /** POSTs a woods request as raw XML text, exactly like a caller would. */
     private Response post(String facilityId, String fromAmount, String toAmount) {
+        return post(facilityId, fromAmount, toAmount, "", "");
+    }
+
+    private Response post(String facilityId, String fromAmount, String toAmount, String fromDate, String toDate) {
         String xml = """
                 <BirdsListRequest>
                   <Body>
                     <FacilityId>%s</FacilityId>
                     <FromAmount>%s</FromAmount>
                     <ToAmount>%s</ToAmount>
+                    <FromDate>%s</FromDate>
+                    <ToDate>%s</ToDate>
                   </Body>
                 </BirdsListRequest>
-                """.formatted(facilityId, fromAmount, toAmount);
+                """.formatted(facilityId, fromAmount, toAmount, fromDate, toDate);
         return target("birds/list").request(MediaType.APPLICATION_XML).post(Entity.xml(xml));
     }
 
@@ -85,7 +92,7 @@ class BirdsListResourceJerseyTest extends JerseyTest {
         Response response = post("F-100", "", "");
 
         assertEquals(200, response.getStatus());
-        verify(catalog).search("F-100", null, null);
+        verify(catalog).search("F-100", null, null, null, null);
     }
 
     @Test
@@ -93,16 +100,34 @@ class BirdsListResourceJerseyTest extends JerseyTest {
         Response response = post("F-100", " 250 ", "   ");
 
         assertEquals(200, response.getStatus());
-        verify(catalog).search("F-100", new BigDecimal("250"), null);
+        verify(catalog).search("F-100", new BigDecimal("250"), null, null, null);
+    }
+
+    @Test
+    void dates_arePassedToTheCatalog() {
+        Response response = post("F-100", "", "", "2026-05-01", " 2026-06-30 ");
+
+        assertEquals(200, response.getStatus());
+        verify(catalog).search("F-100", null, null, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 30));
+    }
+
+    @Test
+    void missingDateElements_meanNoDateFilter() {
+        // An older caller that doesn't know about dates yet
+        String xml = "<BirdsListRequest><Body><FacilityId>F-100</FacilityId></Body></BirdsListRequest>";
+        Response response = target("birds/list").request(MediaType.APPLICATION_XML).post(Entity.xml(xml));
+
+        assertEquals(200, response.getStatus());
+        verify(catalog).search("F-100", null, null, null, null);
     }
 
     // ------------------------------------------------- the XML answer
 
     @Test
     void birdsComeBackAsXml() {
-        when(catalog.search(any(), any(), any())).thenReturn(List.of(new StoredBird(
+        when(catalog.search(any(), any(), any(), any(), any())).thenReturn(List.of(new StoredBird(
                 "B-1", "Robin", "Erithacus rubecula", new BigDecimal("250.00"),
-                "Insects", 12, "Contour", 65, "Brown", null)));
+                "Insects", 12, "Contour", 65, "Brown", null, LocalDate.of(2026, 5, 1))));
 
         Response response = post("F-100", "250", "250");
         String xml = response.readEntity(String.class);
@@ -110,6 +135,7 @@ class BirdsListResourceJerseyTest extends JerseyTest {
         assertEquals(200, response.getStatus());
         assertTrue(xml.contains("<Name>Robin</Name>"), xml);
         assertTrue(xml.contains("<Price>250.00</Price>"), xml);
+        assertTrue(xml.contains("<ArrivalDate>2026-05-01</ArrivalDate>"), xml);
         // A missing secondary colour is sent as an empty element, woods' convention.
         assertTrue(xml.contains("<SecondaryColor></SecondaryColor>") || xml.contains("<SecondaryColor/>"), xml);
     }
@@ -133,6 +159,16 @@ class BirdsListResourceJerseyTest extends JerseyTest {
 
         assertEquals(400, response.getStatus());
         assertTrue(xml.contains("<Code>BAD_AMOUNT</Code>"), xml);
+        verifyNoInteractions(catalog);
+    }
+
+    @Test
+    void notADate_gives400WithAWoodsError() {
+        Response response = post("F-100", "", "", "2026-13-45", "");
+        String xml = response.readEntity(String.class);
+
+        assertEquals(400, response.getStatus());
+        assertTrue(xml.contains("<Code>BAD_DATE</Code>"), xml);
         verifyNoInteractions(catalog);
     }
 }

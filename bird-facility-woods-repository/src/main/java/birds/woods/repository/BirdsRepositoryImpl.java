@@ -17,6 +17,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.ProcessingException;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.ClientBuilder;
 import jakarta.ws.rs.client.Entity;
@@ -24,6 +25,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -106,8 +108,11 @@ public class BirdsRepositoryImpl implements BirdsRepository {
             }
             return response.readEntity(WoodsBirdsListResponse.class);
 
-        } catch (ProcessingException e) {
+        } catch (ProcessingException | WebApplicationException e) {
             // Timeout, connection refused, unreadable XML...
+            // WebApplicationException too: some clients (Jersey) open the connection
+            // while JAXB writes the XML, and report "connection refused" as a 500.
+            // A status from woods never lands here; it's checked above.
             throw new BirdsRepositoryException("Could not call woods at " + woodsUrl, e);
         }
     }
@@ -132,7 +137,13 @@ public class BirdsRepositoryImpl implements BirdsRepository {
                 woods.species,
                 new BigDecimal(woods.price),
                 toFeathers(woods.feathers),
-                new Food(woods.foodType, Integer.parseInt(woods.foodGramsPerDay)));
+                new Food(woods.foodType, Integer.parseInt(woods.foodGramsPerDay)),
+                toDate(woods.arrivalDate));
+    }
+
+    /** Woods' "yyyy-MM-dd" text -> LocalDate. Missing or "" means woods doesn't know: null. */
+    private static LocalDate toDate(String text) {
+        return (text == null || text.isBlank()) ? null : LocalDate.parse(text.trim());
     }
 
     /** Woods' flat feathers -> our Feathers with a nested Colors record. */

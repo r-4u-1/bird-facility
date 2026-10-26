@@ -31,7 +31,7 @@ import static org.mockito.Mockito.when;
 class BirdsServiceTest {
 
     private static Bird bird(String name, String price) {
-        return new Bird("B-" + name, name, "test species", new BigDecimal(price), null, null);
+        return new Bird("B-" + name, name, "test species", new BigDecimal(price), null, null, null);
     }
 
     private static BirdsSearchCriteria criteria() {

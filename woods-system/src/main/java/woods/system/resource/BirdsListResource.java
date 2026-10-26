@@ -14,6 +14,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -56,7 +58,8 @@ public class BirdsListResource {
 
         WoodsXml.RequestBody body = request.body;
         LOG.info("Woods received: facility=" + body.facilityId
-                + " from='" + body.fromAmount + "' to='" + body.toAmount + "'");
+                + " from='" + body.fromAmount + "' to='" + body.toAmount + "'"
+                + " fromDate='" + body.fromDate + "' toDate='" + body.toDate + "'");
 
         BigDecimal min;
         BigDecimal max;
@@ -67,7 +70,16 @@ public class BirdsListResource {
             return badRequest("BAD_AMOUNT", "FromAmount and ToAmount must be numbers or empty");
         }
 
-        List<WoodsXml.BirdElement> birds = catalog.search(body.facilityId, min, max)
+        LocalDate fromDate;
+        LocalDate toDate;
+        try {
+            fromDate = parseDate(body.fromDate);
+            toDate = parseDate(body.toDate);
+        } catch (DateTimeParseException e) {
+            return badRequest("BAD_DATE", "FromDate and ToDate must be yyyy-MM-dd or empty");
+        }
+
+        List<WoodsXml.BirdElement> birds = catalog.search(body.facilityId, min, max, fromDate, toDate)
                 .stream()
                 .map(BirdsListResource::toXml)
                 .toList();
@@ -83,6 +95,11 @@ public class BirdsListResource {
     /** Woods' quirk lives here: "" (or a missing element) means "no filter". */
     private static BigDecimal parseAmount(String text) {
         return isBlank(text) ? null : new BigDecimal(text.trim());
+    }
+
+    /** Same quirk for dates. A missing element (an older caller) also means "no filter". */
+    private static LocalDate parseDate(String text) {
+        return isBlank(text) ? null : LocalDate.parse(text.trim());
     }
 
     private static boolean isBlank(String text) {
@@ -111,6 +128,7 @@ public class BirdsListResource {
         element.foodType = bird.foodType();
         element.foodGramsPerDay = String.valueOf(bird.foodGramsPerDay());
         element.feathers = feathers;
+        element.arrivalDate = bird.arrivedOn() == null ? "" : bird.arrivedOn().toString();
         return element;
     }
 }

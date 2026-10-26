@@ -9,8 +9,8 @@ import jakarta.xml.bind.annotation.XmlType;
  * The INNER <Body> of the request: the actual search fields.
  *
  * Everything is a String because that's what woods expects on the wire,
- * including "" (empty) for "no filter". Our own code uses BigDecimal and
- * Optional; BirdsListParameters converts between the two.
+ * including "" (empty) for "no filter". Dates are "yyyy-MM-dd". Our own code
+ * uses BigDecimal, LocalDate and Optional; BirdsListParameters converts.
  *
  * No @XmlRootElement: <Body> never stands alone, it only appears inside
  * <BirdsListRequest>.
@@ -19,7 +19,7 @@ import jakarta.xml.bind.annotation.XmlType;
  * reject the request if the order is different.
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(propOrder = {"facilityId", "fromAmount", "toAmount"})
+@XmlType(propOrder = {"facilityId", "fromAmount", "toAmount", "fromDate", "toDate"})
 public class BirdsListBody {
 
     @XmlElement(name = "FacilityId", required = true)
@@ -30,4 +30,10 @@ public class BirdsListBody {
 
     @XmlElement(name = "ToAmount", required = true)
     public String toAmount;
+
+    @XmlElement(name = "FromDate", required = true)
+    public String fromDate;
+
+    @XmlElement(name = "ToDate", required = true)
+    public String toDate;
 }
