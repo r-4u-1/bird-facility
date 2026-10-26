@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  bird-facility-service  (module #1 in the tree)
+
+  The REST API the frontend calls. Packaged as a WAR (web archive) that you
+  deploy to a Jakarta EE server. The WAR contains our classes plus the JARs of
+  the two repository modules in WEB-INF/lib.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.example.birds</groupId>
+        <artifactId>bird-facility</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>bird-facility-service</artifactId>
+    <packaging>war</packaging>
+
+    <properties>
+        <!-- No web.xml needed: BirdsApplication's @ApplicationPath switches REST on. -->
+        <failOnMissingWebXml>false</failOnMissingWebXml>
+    </properties>
+
+    <dependencies>
+        <!--
+          COMPILE dependency on the shared contract: our code may use
+          BirdsRepository, BirdsSearchCriteria, Bird and the other models.
+        -->
+        <dependency>
+            <groupId>com.example.birds</groupId>
+            <artifactId>bird-facility-repository</artifactId>
+        </dependency>
+
+        <!--
+          RUNTIME dependency on the woods implementation.
+
+          scope "runtime" = the JAR is packaged into the WAR, so CDI can find
+          BirdsRepositoryImpl when the app runs, but it is NOT on the compile
+          classpath. If anyone in this module writes "import birds.woods...",
+          the build fails. That is how the boundary is enforced by the compiler
+          instead of by discipline.
+        -->
+        <dependency>
+            <groupId>com.example.birds</groupId>
+            <artifactId>bird-facility-woods-repository</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- JAX-RS, CDI, Bean Validation, JSON-B: provided by the server. -->
+        <dependency>
+            <groupId>jakarta.platform</groupId>
+            <artifactId>jakarta.jakartaee-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
+
+        <!-- ===== Test-only (versions come from the parent pom / Jersey BOM) ===== -->
+
+        <!-- Mockito: mocks for BirdsService and BirdsRepository -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+        </dependency>
+
+        <!--
+          JerseyTest: starts a small real HTTP server (Grizzly) with our resource
+          and mappers inside it, plus a client to call it. Like supertest for
+          Express: request(app).get("/birds").expect(400).
+        -->
+        <dependency>
+            <groupId>org.glassfish.jersey.test-framework</groupId>
+            <artifactId>jersey-test-framework-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.test-framework.providers</groupId>
+            <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Jersey's dependency injection (HK2). It handles @Inject when there is no CDI. -->
+        <dependency>
+            <groupId>org.glassfish.jersey.inject</groupId>
+            <artifactId>jersey-hk2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- JSON-B support, so records become JSON like on the real server -->
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-json-binding</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Runs @Valid / @NotBlank / @ValidBirdsQuery inside Jersey (brings Hibernate Validator) -->
+        <dependency>
+            <groupId>org.glassfish.jersey.ext</groupId>
+            <artifactId>jersey-bean-validation</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.expressly</groupId>
+            <artifactId>expressly</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!-- The WAR is called bird-facility-service.war, so the URLs start with /bird-facility-service -->
+        <finalName>bird-facility-service</finalName>
+    </build>
+</project>

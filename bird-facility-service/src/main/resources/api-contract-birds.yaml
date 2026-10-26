@@ -1,0 +1,132 @@
+# api-contract-birds.yaml
+#
+# The OpenAPI contract for the bird facility service: the same format that
+# swagger-jsdoc or FastAPI produce, but written by hand, first ("contract first").
+#
+# In this example it is documentation only. Many real projects add
+# openapi-generator-maven-plugin to the pom, which then GENERATES the BirdsApi
+# interface and the DTO classes from this file at build time, into
+# target/generated-sources. You would then implement the generated interface
+# instead of writing BirdsApi and BirdsListQuery by hand.
+openapi: 3.0.3
+info:
+  title: Bird facility service
+  version: 1.0.0
+  description: Lists the birds in a facility, with an optional price filter.
+
+servers:
+  - url: http://localhost:8080/bird-facility-service/api
+
+paths:
+  /birds:
+    get:
+      operationId: listBirds
+      summary: List the birds in a facility, cheapest first
+      parameters:
+        - name: facilityId
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^F-\d{3}$'
+            example: F-100
+        - name: fromAmount
+          in: query
+          required: false
+          description: >
+            Lowest price. If only fromAmount is given, it is used for both ends,
+            so the search returns birds at exactly that price. A blank value
+            (fromAmount=) counts as not sent.
+          schema:
+            type: string
+            pattern: '^(\s*|\s*\d{1,13}(\.\d{1,2})?\s*)$'
+            example: '100'
+        - name: toAmount
+          in: query
+          required: false
+          description: Highest price. If only toAmount is given, it is used for both ends. Blank counts as not sent.
+          schema:
+            type: string
+            pattern: '^(\s*|\s*\d{1,13}(\.\d{1,2})?\s*)$'
+            example: '300'
+      responses:
+        '200':
+          description: The matching birds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BirdsListResponse'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: The woods system could not be reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    BirdsListResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        birds:
+          type: array
+          items:
+            $ref: '#/components/schemas/Bird'
+    Bird:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        species:
+          type: string
+        price:
+          type: number
+        feathers:
+          $ref: '#/components/schemas/Feathers'
+        food:
+          $ref: '#/components/schemas/Food'
+    Feathers:
+      type: object
+      properties:
+        type:
+          type: string
+        lengthMm:
+          type: integer
+        colors:
+          $ref: '#/components/schemas/Colors'
+    Colors:
+      type: object
+      properties:
+        primary:
+          type: string
+        secondary:
+          type: string
+          nullable: true
+    Food:
+      type: object
+      properties:
+        type:
+          type: string
+        gramsPerDay:
+          type: integer
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+        error:
+          type: string
+        details:
+          type: array
+          items:
+            type: string

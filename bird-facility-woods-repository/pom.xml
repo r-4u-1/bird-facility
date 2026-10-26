@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  bird-facility-woods-repository  (module #3 in the tree)
+
+  The woods IMPLEMENTATION of the BirdsRepository interface. Everything about
+  the woods system lives here and nowhere else:
+    - its XML format (JAXB classes in model/request and model/response)
+    - its quirks (an empty string means "no filter")
+    - the HTTP call itself (BirdsRepositoryImpl)
+
+  It depends on the shared module (#2) to see the interface and the models.
+  The service (#1) does NOT depend on this module at compile time; it is only
+  added at runtime (see the service pom), so the service can't accidentally
+  use woods classes.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.example.birds</groupId>
+        <artifactId>bird-facility</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>bird-facility-woods-repository</artifactId>
+    <packaging>jar</packaging>
+
+    <dependencies>
+        <!-- The interface we implement and the models we return. -->
+        <dependency>
+            <groupId>com.example.birds</groupId>
+            <artifactId>bird-facility-repository</artifactId>
+        </dependency>
+
+        <!-- JAX-RS client, CDI and JAXB annotations. Provided by the server. -->
+        <dependency>
+            <groupId>jakarta.platform</groupId>
+            <artifactId>jakarta.jakartaee-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
+
+        <!--
+          ===== Test-only =====
+          BirdsRepositoryImplJerseyTest starts a FAKE woods server with Jersey
+          and points BirdsRepositoryImpl at it, so the real HTTP + XML code runs.
+          The JAX-RS client inside BirdsRepositoryImpl is then also Jersey.
+        -->
+        <dependency>
+            <groupId>org.glassfish.jersey.test-framework</groupId>
+            <artifactId>jersey-test-framework-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.test-framework.providers</groupId>
+            <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.inject</groupId>
+            <artifactId>jersey-hk2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- XML support (JAXB) for Jersey, on both the fake server and the client -->
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-jaxb</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+        </dependency>
+    </dependencies>
+</project>

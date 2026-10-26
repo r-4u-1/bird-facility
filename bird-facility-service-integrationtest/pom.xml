@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  bird-facility-service-integrationtest
+
+  Black-box tests: they call the DEPLOYED service over HTTP, exactly like the
+  frontend would, and check the answers. They don't import any service code.
+
+  They need both WARs running, so they are NOT part of a normal "mvn verify".
+  Run them on purpose with the "it" profile:
+
+      mvn verify -Pit -pl bird-facility-service-integrationtest
+
+  Point them at another environment with -Dbirds.baseUrl=https://...
+
+  Why the step code is in src/main (as in your project): this module's whole
+  purpose is testing, so its "main" code IS the test code. The small runner in
+  src/test only tells JUnit to start Cucumber.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.example.birds</groupId>
+        <artifactId>bird-facility</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>bird-facility-service-integrationtest</artifactId>
+    <packaging>jar</packaging>
+
+    <dependencies>
+        <!-- @Given/@When/@Then annotations for the step definitions (used in src/main). -->
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-java</artifactId>
+        </dependency>
+        <!-- assertEquals and friends, also used in src/main, so "compile" scope here. -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>compile</scope>
+        </dependency>
+
+        <!-- Lets JUnit 5 run Cucumber features, and lets us group them in a @Suite. -->
+        <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-junit-platform-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-suite</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <profiles>
+        <profile>
+            <id>it</id>
+            <build>
+                <plugins>
+                    <!--
+                      Failsafe runs classes named *IT during "mvn verify".
+                      It's only switched on inside this profile, so a normal
+                      build of the whole project never needs a running server.
+                    -->
+                    <plugin>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

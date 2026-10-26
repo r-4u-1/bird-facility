@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  bird-facility-repository  (module #2 in the tree)
+
+  The CONTRACT between the service and any data source:
+    - the BirdsRepository interface ("how to get birds")
+    - the model classes everyone shares (Bird, Feathers, Colors, Food ...)
+
+  Note what is NOT here: no Jakarta EE dependency at all. This module is plain
+  Java, so it knows nothing about HTTP, JSON, XML or the woods system. Both the
+  service (#1) and the woods implementation (#3) depend on THIS module, and
+  never on each other.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Inherit versions, Java level and plugin config from the parent pom. -->
+    <parent>
+        <groupId>com.example.birds</groupId>
+        <artifactId>bird-facility</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>bird-facility-repository</artifactId>
+    <!-- "jar" = a plain library, packaged into the WAR of whoever uses it. -->
+    <packaging>jar</packaging>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
+    </dependencies>
+</project>
