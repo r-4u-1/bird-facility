@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PARENT POM - the root of a multi-module Maven build.
+
+  Think of it as the root package.json of an npm workspace:
+    - <modules> lists the sub-projects (like "workspaces": [...])
+    - <dependencyManagement> pins versions once, so the modules can declare
+      a dependency WITHOUT a version and still all use the same one
+    - <pluginManagement> does the same for build plugins
+
+  packaging "pom" = this project produces no code itself; it only groups
+  and configures the modules below. Build everything from this folder with:
+      mvn verify
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example.birds</groupId>
+    <artifactId>bird-facility</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <!--
+      The modules, in the order of the request flow. Maven works out the real
+      build order from the dependencies between them, so the order here is
+      only for readers.
+    -->
+    <modules>
+        <!-- #2 shared contract: the BirdsRepository interface + the model classes -->
+        <module>bird-facility-repository</module>
+        <!-- #3 the woods implementation of that interface: talks XML to woods -->
+        <module>bird-facility-woods-repository</module>
+        <!-- #1 the REST API the frontend calls (a WAR) -->
+        <module>bird-facility-service</module>
+        <!-- Cucumber tests that call the deployed service over HTTP -->
+        <module>bird-facility-service-integrationtest</module>
+        <!-- A stand-in for the lower business application: an XML-only REST API (a WAR) -->
+        <module>woods-system</module>
+    </modules>
+
+    <properties>
+        <!-- Compile for Java 17 (records, text blocks, pattern matching all available). -->
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <jakartaee.version>10.0.0</jakartaee.version>
+        <junit.version>5.10.2</junit.version>
+        <junit.platform.version>1.10.2</junit.platform.version>
+        <cucumber.version>7.15.0</cucumber.version>
+
+        <!-- Test-only libraries -->
+        <!-- Jersey 3.1 = the JAX-RS 3.1 implementation matching Jakarta EE 10 -->
+        <jersey.version>3.1.5</jersey.version>
+        <mockito.version>5.11.0</mockito.version>
+        <jaxb.runtime.version>4.0.4</jaxb.runtime.version>
+        <expressly.version>5.0.0</expressly.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!--
+              The whole Jakarta EE 10 API (JAX-RS, CDI, Bean Validation, JSON-B,
+              JAXB...). Scope "provided" = compile against it but do NOT put it in
+              the WAR, because the application server already ships it.
+              Closest npm idea: a peerDependency.
+            -->
+            <dependency>
+                <groupId>jakarta.platform</groupId>
+                <artifactId>jakarta.jakartaee-api</artifactId>
+                <version>${jakartaee.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- Our own modules, so other modules can depend on them without a version. -->
+            <dependency>
+                <groupId>com.example.birds</groupId>
+                <artifactId>bird-facility-repository</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.example.birds</groupId>
+                <artifactId>bird-facility-woods-repository</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Unit tests (JUnit 5 = Java's Jest). Scope "test" = like devDependencies. -->
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Integration tests: Cucumber running on the JUnit 5 platform. -->
+            <dependency>
+                <groupId>io.cucumber</groupId>
+                <artifactId>cucumber-java</artifactId>
+                <version>${cucumber.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.cucumber</groupId>
+                <artifactId>cucumber-junit-platform-engine</artifactId>
+                <version>${cucumber.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.platform</groupId>
+                <artifactId>junit-platform-suite</artifactId>
+                <version>${junit.platform.version}</version>
+            </dependency>
+
+            <!--
+              ===== Test-only: Mockito and Jersey =====
+
+              Unit tests run WITHOUT an application server. The server normally
+              supplies the JAX-RS, JSON-B, JAXB and Bean Validation
+              implementations, so the tests bring their own: Jersey (the
+              reference JAX-RS implementation) plus its JSON-B, JAXB and
+              validation modules. All of it is scope "test": none of it ends up
+              in the WARs.
+            -->
+
+            <!-- Mockito: creates fake objects ("mocks") and checks how they were called.
+                 Like jest.fn() / jest.mock(). -->
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <!-- @ExtendWith(MockitoExtension.class), @Mock and @InjectMocks for JUnit 5 -->
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-junit-jupiter</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!--
+              The Jersey BOM ("bill of materials") pins the versions of ALL
+              Jersey artifacts at once, so modules list Jersey artifacts without
+              versions. scope "import" + type "pom" is how a BOM is pulled in.
+            -->
+            <dependency>
+                <groupId>org.glassfish.jersey</groupId>
+                <artifactId>jersey-bom</artifactId>
+                <version>${jersey.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- A JAXB implementation, so Jersey can read and write XML in tests. -->
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-runtime</artifactId>
+                <version>${jaxb.runtime.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <!-- An Expression Language implementation; Hibernate Validator uses it to build messages. -->
+            <dependency>
+                <groupId>org.glassfish.expressly</groupId>
+                <artifactId>expressly</artifactId>
+                <version>${expressly.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.12.1</version>
+                </plugin>
+                <!-- Runs unit tests (classes named *Test) during "mvn test". -->
+                <plugin>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.2.5</version>
+                </plugin>
+                <!-- Runs integration tests (classes named *IT) during "mvn verify". -->
+                <plugin>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>3.2.5</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-war-plugin</artifactId>
+                    <version>3.4.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>
